@@ -24,8 +24,38 @@ RUN set -eu && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Copy Guacamole daemon from official image
-COPY --from=guacamole/guacd:1.6.0 /opt/guacamole /opt/guacamole
+# Install build dependencies and compile Guacamole server (VNC only)
+RUN apt-get update && \
+    apt-get --no-install-recommends -y install \
+        build-essential \
+        libcairo2-dev \
+        libjpeg-dev \
+        libpng-dev \
+        libtool \
+        uuid-dev \
+        libvncserver-dev \
+        libssl-dev \
+        libpango1.0-dev \
+        libwebp-dev \
+        libssh2-1-dev \
+        autoconf \
+        automake \
+        pkg-config && \
+    cd /tmp && \
+    wget -q https://archive.apache.org/dist/guacamole/1.6.0/source/guacamole-server-1.6.0.tar.gz && \
+    tar -xzf guacamole-server-1.6.0.tar.gz && \
+    cd guacamole-server-1.6.0 && \
+    autoreconf -fiv && \
+    ./configure --prefix=/opt/guacamole --with-init-dir=/etc/init.d --disable-rdp --disable-ssh --disable-telnet --disable-kubernetes && \
+    make && \
+    make install && \
+    ldconfig && \
+    cd / && \
+    rm -rf /tmp/guacamole-server-1.6.0* && \
+    apt-get remove -y build-essential autoconf automake pkg-config libtool && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Extract Guacamole web client JavaScript libraries
 RUN mkdir -p /usr/share/guacamole/guacamole-common-js && \

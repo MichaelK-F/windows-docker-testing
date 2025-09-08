@@ -8,8 +8,15 @@ set -Eeuo pipefail
 info "Starting Guacamole daemon..."
 
 # Start guacd in background
-exec /opt/guacamole/sbin/guacd -b 127.0.0.1 -L info -p /var/run/guacd.pid &
+/opt/guacamole/sbin/guacd -b 127.0.0.1 -L info -p /var/run/guacd.pid &
 
-sleep 1
+sleep 2
+
+# Verify guacd started
+if [ -f /var/run/guacd.pid ]; then
+    info "Guacamole daemon started successfully"
+else
+    warn "Guacamole daemon may not have started properly"
+fi
 
 return 0
