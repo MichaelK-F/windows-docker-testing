@@ -17,6 +17,7 @@ cd /run
 . display.sh    # Initialize graphics
 . network.sh    # Initialize network
 . samba.sh      # Configure samba
+. guacamole.sh  # Start Guacamole
 . boot.sh       # Configure boot
 . proc.sh       # Initialize processor
 . power.sh      # Configure shutdown
