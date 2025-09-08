@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Windows VM - Guacamole</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        #guac-display {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        #status {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+            font-size: 14px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="status">Connecting to Windows VM...</div>
+    <div id="guac-display"></div>
+
+    <script src="guacamole-common-js/all.min.js"></script>
+    <script>
+        var statusDiv = document.getElementById('status');
+        var display = document.getElementById('guac-display');
+        
+        function updateStatus(message) {
+            statusDiv.textContent = message;
+            console.log('Status:', message);
+        }
+
+        function connectToVM() {
+            // Configure the Guacamole connection
+            var tunnel = new Guacamole.WebSocketTunnel('/guacamole/websocket-tunnel');
+            var client = new Guacamole.Client(tunnel);
+            
+            // Create display
+            var element = client.getDisplay().getElement();
+            display.appendChild(element);
+            
+            // Handle connection events
+            client.onstatechange = function(state) {
+                switch (state) {
+                    case Guacamole.Client.IDLE:
+                        updateStatus("Idle");
+                        break;
+                    case Guacamole.Client.CONNECTING:
+                        updateStatus("Connecting...");
+                        break;
+                    case Guacamole.Client.WAITING:
+                        updateStatus("Waiting for server...");
+                        break;
+                    case Guacamole.Client.CONNECTED:
+                        updateStatus("Connected");
+                        setTimeout(() => statusDiv.classList.add('hidden'), 3000);
+                        break;
+                    case Guacamole.Client.DISCONNECTING:
+                        updateStatus("Disconnecting...");
+                        break;
+                    case Guacamole.Client.DISCONNECTED:
+                        updateStatus("Disconnected");
+                        break;
+                }
+            };
+
+            client.onerror = function(error) {
+                updateStatus("Error: " + error.message);
+                console.error('Guacamole error:', error);
+            };
+
+            // Mouse and keyboard handling
+            var mouse = new Guacamole.Mouse(element);
+            var keyboard = new Guacamole.Keyboard(document);
+
+            mouse.onmousedown = 
+            mouse.onmouseup   = 
+            mouse.onmousemove = function(mouseState) {
+                client.sendMouseState(mouseState);
+            };
+
+            keyboard.onkeydown = function(keysym) {
+                client.sendKeyEvent(1, keysym);
+            };
+
+            keyboard.onkeyup = function(keysym) {
+                client.sendKeyEvent(0, keysym);
+            };
+
+            // Connect with VNC settings
+            var connectionString = [
+                'vnc',
+                'hostname=127.0.0.1',
+                'port=5900',
+                'width=1024',
+                'height=768'
+            ].join('\u0000');
+            
+            client.connect(connectionString);
+            
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                if (client.getDisplay()) {
+                    client.getDisplay().scale(
+                        Math.min(
+                            window.innerWidth / client.getDisplay().getWidth(),
+                            window.innerHeight / client.getDisplay().getHeight()
+                        )
+                    );
+                }
+            });
+        }
+
+        // Start connection when page loads
+        window.addEventListener('load', connectToVM);
+    </script>
+</body>
+</html>
